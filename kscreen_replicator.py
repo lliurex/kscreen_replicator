@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+#Copyright 2021 LliureX Team
+#This script is licensed under GPL-3 license
+
 import dbus,dbus.exceptions
 import logging
 
