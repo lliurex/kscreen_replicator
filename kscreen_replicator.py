@@ -58,10 +58,12 @@ class kscreenDbus():
 		maxRes=(0,0)
 		selectId=0
 		for modeId in modesDict[screens[0]]:
+			print("mode id:{0}".format(modeId))
 			if modeId in modesDict[screens[1]]:
 				sizes=sizesDict.get(modeId)
 				if sizes:
 					(w,h)=sizes
+					print("* {0} {1}".format(w,h))
 					if maxRes[0]<w and w<=self.maxW:
 						if maxRes[1]<h  and h<=maxH:
 							maxRes=(w,h)
@@ -95,6 +97,48 @@ class kscreenDbus():
 
 bus=kscreenDbus()
 config=bus.getConfig()
-selectId=bus.getMaxCommonResolution(config)		
-bus._debug("Selected mode: {}".format(selectId))
-bus.setResolution(config,selectId)
+
+match={}
+for output in config.get("outputs"):
+    if (output.get("connected")):
+        name = output.get("name")
+
+        for mode in output.get("modes"):
+            w=mode.get("size").get("width")
+            h=mode.get("size").get("height")
+            pixels = w*h
+
+            if not pixels in match:
+                match[pixels]={}
+            if not name in match[pixels]:
+                match[pixels][name]=[]
+
+            match[pixels][name].append(mode.get("id"))
+
+candidate=-1
+for m in sorted(match.keys()):
+    if (len(match[m].keys())>1):
+        candidate=m
+        print("pixels:",m)
+        for k in match[m]:
+            print("* ",k)
+            for i in match[m][k]:
+                print("\t ",i)
+
+print("selected:",candidate)
+cfg = match[candidate]
+
+for output in config.get("outputs"):
+    if (output.get("connected")):
+        name = output.get("name")
+        if name in cfg:
+            print("- setting mode {0} to {1}".format(cfg[name][0],name))
+            output.update(({dbus.String('currentModeId'):dbus.String(cfg[name][0])}))
+            pos=output.get('pos')
+            pos.update({dbus.String('x'):dbus.Int64(0),dbus.String('y'):dbus.Int64(0)})
+
+print("setting...")
+bus.bus.setConfig(config)
+#selectId=bus.getMaxCommonResolution(config)
+#bus._debug("Selected mode: {}".format(selectId))
+#bus.setResolution(config,selectId)
